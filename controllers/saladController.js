@@ -1,13 +1,20 @@
 const Salad = require('../models/salad');
 
-exports.getAllSalads = async (req, res) => {
+exports.getAllSalad = async (req, res) => {
     try {
-        console.log("Đang truy vấn salads...");
         const salads = await Salad.find();
-        console.log("Salads:", salads);
         res.json(salads);
     } catch (error) {
-        console.error("Lỗi truy vấn:", error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.createSalad = async (req, res) => {
+    try {
+        const newSalad = new Salad(req.body);
+        const savedSalad = await newSalad.save();
+        res.status(201).json(savedSalad);
+    } catch (error) {
         res.status(500).json({ error: error.message });
     }
 };

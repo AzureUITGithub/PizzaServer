@@ -2,12 +2,19 @@ const Pizza = require('../models/pizza');
 
 exports.getAllPizzas = async (req, res) => {
     try {
-        console.log("Đang truy vấn pizzas...");
         const pizzas = await Pizza.find();
-        console.log("Pizzas:", pizzas);
         res.json(pizzas);
     } catch (error) {
-        console.error("Lỗi truy vấn:", error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.createPizza = async (req, res) => {
+    try {
+        const newPizza = new Pizza(req.body);
+        const savedPizza = await newPizza.save();
+        res.status(201).json(savedPizza);
+    } catch (error) {
         res.status(500).json({ error: error.message });
     }
 };
