@@ -4,7 +4,6 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 
-// Get all users
 exports.getAllUsers = async (req, res) => {
     try {
         const users = await User.find();
@@ -14,7 +13,6 @@ exports.getAllUsers = async (req, res) => {
     }
 };
 
-// Create a new user
 exports.createUser = async (req, res) => {
     try {
         const { username, password, email, address, date_of_birth, role } = req.body;
@@ -34,7 +32,6 @@ exports.createUser = async (req, res) => {
     }
 };
 
-// User login
 exports.login = async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -61,7 +58,6 @@ exports.logout = (req, res) => {
     res.json({ message: 'Logged out successfully' });
 };
 
-// Forget password - request reset
 exports.forgetPassword = async (req, res) => {
     try {
         const { email } = req.body;
