@@ -12,13 +12,12 @@ const userRoutes = require('./routes/userRoutes');
 const app = express();
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('Đã kết nối tới MongoDB Atlas'))
   .catch(err => console.error('Không thể kết nối tới MongoDB', err));
 
-// Routes
 app.use('/api/pizza', pizzaRoutes);
 app.use('/api/drink', drinkRoutes);
 app.use('/api/salad', saladRoutes);
@@ -26,7 +25,6 @@ app.use('/api/side', sideRoutes);
 app.use('/api/topping', toppingRoutes);
 app.use('/api/user', userRoutes);
 
-// Error handling middleware
 app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).json({ error: 'Something went wrong!' });
