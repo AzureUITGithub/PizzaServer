@@ -4,13 +4,36 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 
-// Get all users
+// Get all users (chỉ admin, đã được bảo vệ bởi isAdmin middleware)
 exports.getAllUsers = async (req, res) => {
     try {
-        const users = await User.find();
+        const users = await User.find().select('-password');
         res.json(users);
     } catch (error) {
         console.error('Error in getAllUsers:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// Get user by ID
+exports.getUserById = async (req, res) => {
+    try {
+        // req.user được thêm bởi authMiddleware
+        const requestingUser = req.user;
+        const requestedUserId = req.params.id;
+
+        // Kiểm tra quyền: admin có thể xem bất kỳ user, user chỉ xem được chính mình
+        if (requestingUser.role !== 'admin' && requestingUser.userId !== requestedUserId) {
+            return res.status(403).json({ error: 'Access denied. You can only view your own profile.' });
+        }
+
+        const user = await User.findById(requestedUserId).select('-password');
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        res.json(user);
+    } catch (error) {
+        console.error('Error in getUserById:', error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -32,6 +55,64 @@ exports.createUser = async (req, res) => {
         res.status(201).json(savedUser);
     } catch (error) {
         console.error('Error in createUser:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// Update user
+exports.updateUser = async (req, res) => {
+    try {
+        const requestingUser = req.user;
+        const requestedUserId = req.params.id;
+
+        // Kiểm tra quyền: admin có thể cập nhật bất kỳ user, user chỉ cập nhật chính mình
+        if (requestingUser.role !== 'admin' && requestingUser.userId !== requestedUserId) {
+            return res.status(403).json({ error: 'Access denied. You can only update your own profile.' });
+        }
+
+        const { username, password, email, address, date_of_birth, role } = req.body;
+        const updateData = { username, email, address, date_of_birth, role };
+        
+        // Chỉ hash và cập nhật mật khẩu nếu được cung cấp
+        if (password) {
+            updateData.password = await bcrypt.hash(password, 10);
+        }
+
+        const user = await User.findByIdAndUpdate(
+            requestedUserId,
+            updateData,
+            { new: true, runValidators: true }
+        ).select('-password');
+        
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        res.json(user);
+    } catch (error) {
+        console.error('Error in updateUser:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// Delete user
+exports.deleteUser = async (req, res) => {
+    try {
+        const requestingUser = req.user;
+        const requestedUserId = req.params.id;
+
+        // Kiểm tra quyền: admin có thể xóa bất kỳ user, user chỉ xóa chính mình
+        if (requestingUser.role !== 'admin' && requestingUser.userId !== requestedUserId) {
+            return res.status(403).json({ error: 'Access denied. You can only delete your own account.' });
+        }
+
+        const user = await User.findByIdAndDelete(requestedUserId);
+        if (!user) {
+            returnimgs
+            return res.status(404).json({ error: 'User not found' });
+        }
+        res.json({ message: 'User deleted successfully' });
+    } catch (error) {
+        console.error('Error in deleteUser:', error);
         res.status(500).json({ error: error.message });
     }
 };
