@@ -2,7 +2,7 @@ const User = require('../models/user');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
-const crypto = require('crypto');
+const BlacklistedToken = require('../models/blacklistedToken');
 
 // Get all users (chỉ admin, đã được bảo vệ bởi isAdmin middleware)
 exports.getAllUsers = async (req, res) => {
@@ -18,11 +18,9 @@ exports.getAllUsers = async (req, res) => {
 // Get user by ID
 exports.getUserById = async (req, res) => {
     try {
-        // req.user được thêm bởi authMiddleware
         const requestingUser = req.user;
         const requestedUserId = req.params.id;
 
-        // Kiểm tra quyền: admin có thể xem bất kỳ user, user chỉ xem được chính mình
         if (requestingUser.role !== 'admin' && requestingUser.userId !== requestedUserId) {
             return res.status(403).json({ error: 'Access denied. You can only view your own profile.' });
         }
@@ -65,7 +63,6 @@ exports.updateUser = async (req, res) => {
         const requestingUser = req.user;
         const requestedUserId = req.params.id;
 
-        // Kiểm tra quyền: admin có thể cập nhật bất kỳ user, user chỉ cập nhật chính mình
         if (requestingUser.role !== 'admin' && requestingUser.userId !== requestedUserId) {
             return res.status(403).json({ error: 'Access denied. You can only update your own profile.' });
         }
@@ -73,7 +70,6 @@ exports.updateUser = async (req, res) => {
         const { username, password, email, address, date_of_birth, role } = req.body;
         const updateData = { username, email, address, date_of_birth, role };
         
-        // Chỉ hash và cập nhật mật khẩu nếu được cung cấp
         if (password) {
             updateData.password = await bcrypt.hash(password, 10);
         }
@@ -100,14 +96,12 @@ exports.deleteUser = async (req, res) => {
         const requestingUser = req.user;
         const requestedUserId = req.params.id;
 
-        // Kiểm tra quyền: admin có thể xóa bất kỳ user, user chỉ xóa chính mình
         if (requestingUser.role !== 'admin' && requestingUser.userId !== requestedUserId) {
             return res.status(403).json({ error: 'Access denied. You can only delete your own account.' });
         }
 
         const user = await User.findByIdAndDelete(requestedUserId);
         if (!user) {
-            returnimgs
             return res.status(404).json({ error: 'User not found' });
         }
         res.json({ message: 'User deleted successfully' });
@@ -139,9 +133,32 @@ exports.login = async (req, res) => {
     }
 };
 
-// User logout (client-side token invalidation)
-exports.logout = (req, res) => {
-    res.json({ message: 'Logged out successfully' });
+// User logout
+exports.logout = async (req, res) => {
+    try {
+        const authHeader = req.header('Authorization');
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(400).json({ error: 'No token provided.' });
+        }
+
+        const token = authHeader.replace('Bearer ', '');
+        // Lấy thời gian hết hạn từ token
+        const decoded = jwt.decode(token);
+        if (!decoded || !decoded.exp) {
+            return res.status(400).json({ error: 'Invalid token.' });
+        }
+
+        // Thêm token vào danh sách đen
+        await BlacklistedToken.create({
+            token,
+            expiresAt: new Date(decoded.exp * 1000) // Chuyển đổi giây thành milliseconds
+        });
+
+        res.json({ message: 'Logged out successfully' });
+    } catch (error) {
+        console.error('Error in logout:', error);
+        res.status(500).json({ error: error.message });
+    }
 };
 
 // Forget password - request reset
@@ -157,7 +174,6 @@ exports.forgetPassword = async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // Tạo mã token 6 số ngẫu nhiên
         const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
         const resetTokenExpiry = Date.now() + 3600000; // Hết hạn sau 1 giờ
         user.resetPasswordToken = resetToken;
