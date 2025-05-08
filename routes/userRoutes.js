@@ -23,7 +23,6 @@ router.post('/logout', authMiddleware, userController.logout);
 router.post('/createUser', userController.createUser);            // Đăng ký
 router.post('/login', userController.login);                      // Đăng nhập
 router.post('/forget-password', userController.forgetPassword);   // Quên mật khẩu
-router.get('/reset-password/:token', userController.showResetForm); // Form reset
 router.post('/reset-password', userController.resetPassword);     // Đổi mật khẩu
 
 module.exports = router;

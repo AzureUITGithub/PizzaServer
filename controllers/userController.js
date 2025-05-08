@@ -156,8 +156,10 @@ exports.forgetPassword = async (req, res) => {
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
-        const resetToken = crypto.randomBytes(32).toString('hex');
-        const resetTokenExpiry = Date.now() + 3600000; // 1 hour
+
+        // Tạo mã token 6 số ngẫu nhiên
+        const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
+        const resetTokenExpiry = Date.now() + 3600000; // Hết hạn sau 1 giờ
         user.resetPasswordToken = resetToken;
         user.resetPasswordExpires = resetTokenExpiry;
         await user.save();
@@ -172,48 +174,20 @@ exports.forgetPassword = async (req, res) => {
         });
         console.log('Nodemailer transporter created with user:', process.env.EMAIL_USER);
 
-        const resetUrl = `${process.env.FRONTEND_URL}/api/user/reset-password/${resetToken}`;
         const mailOptions = {
             to: user.email,
             from: process.env.EMAIL_USER,
-            subject: 'Password Reset Request',
-            text: `You requested a password reset. Click this link to reset your password: ${resetUrl}\n\nIf you did not request this, please ignore this email.`,
+            subject: 'Password Reset Code',
+            text: `You requested a password reset. Your verification code is: ${resetToken}\n\nUse this code to reset your password. It is valid for 1 hour.\n\nIf you did not request this, please ignore this email.`,
         };
         console.log('Mail options prepared:', mailOptions);
 
         await transporter.sendMail(mailOptions);
         console.log('Password reset email sent to:', user.email);
-        res.json({ message: 'Password reset email sent' });
+        res.json({ message: 'Password reset code sent to your email' });
     } catch (error) {
         console.error('Error in forgetPassword:', error);
         res.status(500).json({ error: error.message || 'Failed to process forget password request' });
-    }
-};
-
-// Show reset password form
-exports.showResetForm = async (req, res) => {
-    try {
-        const { token } = req.params;
-        const user = await User.findOne({
-            resetPasswordToken: token,
-            resetPasswordExpires: { $gt: Date.now() },
-        });
-        if (!user) {
-            return res.status(400).send('Invalid or expired reset token');
-        }
-        // Serve a simple HTML form
-        res.send(`
-            <h2>Reset Password</h2>
-            <form action="/api/user/reset-password" method="POST">
-                <input type="hidden" name="token" value="${token}">
-                <label for="newPassword">New Password:</label>
-                <input type="password" id="newPassword" name="newPassword" required><br><br>
-                <button type="submit">Submit</button>
-            </form>
-        `);
-    } catch (error) {
-        console.error('Error in showResetForm:', error);
-        res.status(500).send('Something went wrong');
     }
 };
 
@@ -221,13 +195,18 @@ exports.showResetForm = async (req, res) => {
 exports.resetPassword = async (req, res) => {
     try {
         const { token, newPassword } = req.body;
+        if (!token || !newPassword) {
+            return res.status(400).json({ error: 'Token and new password are required' });
+        }
+
         const user = await User.findOne({
             resetPasswordToken: token,
             resetPasswordExpires: { $gt: Date.now() },
         });
         if (!user) {
-            return res.status(400).json({ error: 'Invalid or expired reset token' });
+            return res.status(400).json({ error: 'Invalid or expired reset code' });
         }
+
         user.password = await bcrypt.hash(newPassword, 10);
         user.resetPasswordToken = undefined;
         user.resetPasswordExpires = undefined;
