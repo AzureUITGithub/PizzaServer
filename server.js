@@ -14,6 +14,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('Đã kết nối tới MongoDB Atlas'))
   .catch(err => console.error('Không thể kết nối tới MongoDB', err));

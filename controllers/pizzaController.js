@@ -1,4 +1,5 @@
 const Pizza = require('../models/pizza');
+const { uploadToBlob } = require('../utils/azureBlob');
 
 exports.getAllPizzas = async (req, res) => {
     try {
@@ -23,11 +24,48 @@ exports.getPizzaById = async (req, res) => {
 
 exports.createPizza = async (req, res) => {
     try {
-        const newPizza = new Pizza(req.body);
+        // Ensure file was uploaded correctly if present
+        if (req.file) {
+            if (!req.file.buffer) {
+                return res.status(400).json({ error: 'File upload failed - no buffer data' });
+            }
+        }
+
+        const { name, description, size, crust_type, toppings, base_price } = req.body;
+        
+        if (!name || !description || !size || !crust_type || !base_price) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        let imageUrl = '';
+        if (req.file) {
+            try {
+                const blobName = `${Date.now()}-${req.file.originalname}`;
+                imageUrl = await uploadToBlob(req.file.buffer, blobName);
+            } catch (uploadError) {
+                console.error('Azure upload failed:', uploadError);
+                return res.status(500).json({ error: 'Failed to upload image' });
+            }
+        }
+
+        const newPizza = new Pizza({
+            name,
+            description,
+            size,
+            crust_type,
+            toppings: Array.isArray(toppings) ? toppings : toppings.split(','),
+            base_price,
+            imageUrl
+        });
+
         const savedPizza = await newPizza.save();
         res.status(201).json(savedPizza);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Error creating pizza:', error);
+        res.status(500).json({ 
+            error: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 };
 
