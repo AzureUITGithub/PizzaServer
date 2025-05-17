@@ -24,5 +24,6 @@ router.post('/createUser', userController.createUser);            // Đăng ký
 router.post('/login', userController.login);                      // Đăng nhập
 router.post('/forget-password', userController.forgetPassword);   // Quên mật khẩu
 router.post('/reset-password', userController.resetPassword);     // Đổi mật khẩu
+router.post('/verify-code', userController.verifyResetCode); // Xác minh mã reset mật khẩu
 
 module.exports = router;

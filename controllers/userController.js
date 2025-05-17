@@ -217,3 +217,26 @@ exports.resetPassword = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+// Verify reset token (mã xác thực)
+exports.verifyResetCode = async (req, res) => {
+    try {
+        const { token } = req.body;
+        if (!token) {
+            return res.status(400).json({ error: 'Token is required' });
+        }
+
+        const user = await User.findOne({
+            resetPasswordToken: token,
+            resetPasswordExpires: { $gt: Date.now() },
+        });
+
+        if (!user) {
+            return res.status(400).json({ error: 'Invalid or expired token' });
+        }
+
+        res.json({ message: 'Token is valid' });
+    } catch (error) {
+        console.error('Error in verifyResetCode:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
