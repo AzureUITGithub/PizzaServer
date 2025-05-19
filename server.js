@@ -8,6 +8,8 @@ const saladRoutes = require('./routes/saladRoutes');
 const sideRoutes = require('./routes/sideRoutes');
 const toppingRoutes = require('./routes/toppingRoutes');
 const userRoutes = require('./routes/userRoutes');
+const cartRoutes = require('./routes/cartRoutes'); 
+const deliveryRoutes = require('./routes/deliveryRoutes'); 
 
 const app = express();
 
@@ -24,6 +26,8 @@ app.use('/api/salad', saladRoutes);
 app.use('/api/side', sideRoutes);
 app.use('/api/topping', toppingRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/cart', cartRoutes); 
+app.use('/api/delivery', deliveryRoutes); 
 
 app.use((err, req, res, next) => {
     console.error(err.stack);

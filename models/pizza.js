@@ -6,7 +6,8 @@ const pizzaSchema = new mongoose.Schema({
     size: { type: String, required: true },
     crust_type: { type: String, required: true },
     toppings: [{ type: String, required: true }], 
-    base_price: { type: Number, required: true }
+    base_price: { type: Number, required: true },
+    image_url: { type: String, required: false }
 });
 
 module.exports = mongoose.model('pizza', pizzaSchema);
