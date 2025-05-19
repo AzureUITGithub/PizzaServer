@@ -46,13 +46,29 @@ exports.addToCart = async (req, res) => {
                 pizzaPrice = existingPizza.base_price * (pizza.quantity || 1);
                 cart.pizzas.push({ pizzaId: pizza.pizzaId, quantity: pizza.quantity || 1 });
             } else if (pizza.customPizza) {
-                const { name, description, size, crust_type, toppings, base_price } = pizza.customPizza;
-                const toppingDocs = await Topping.find({ _id: { $in: toppings } });
+                const { pizzaId, size, crust_type, toppings, quantity } = pizza.customPizza;
+                if (!pizzaId) {
+                    return res.status(400).json({ error: 'pizzaId is required for custom pizza' });
+                }
+                const basePizza = await Pizza.findById(pizzaId);
+                if (!basePizza) {
+                    return res.status(404).json({ error: 'Base pizza not found' });
+                }
+                // Use base pizza's name and base_price, ignore user-provided name or base_price
+                const toppingDocs = await Topping.find({ _id: { $in: toppings || [] } });
                 const toppingBasePrice = toppingDocs.reduce((sum, topping) => sum + (topping.base_price || 0), 0);
-                pizzaPrice = (base_price + toppingBasePrice) * (pizza.quantity || 1);
+                pizzaPrice = (basePizza.base_price + toppingBasePrice) * (quantity || 1);
                 cart.pizzas.push({
-                    customPizza: { name, description, size, crust_type, toppings, base_price },
-                    quantity: pizza.quantity || 1
+                    customPizza: {
+                        pizzaId: basePizza._id,
+                        name: basePizza.name, // Use pizza name from collection
+                        description: basePizza.description,
+                        size: size || basePizza.size, // Default to base pizza size if not provided
+                        crust_type: crust_type || 'regular', // Default to 'regular' if not provided
+                        toppings: toppings || [],
+                        base_price: basePizza.base_price // Use base pizza price from collection
+                    },
+                    quantity: quantity || 1
                 });
             }
             totalPrice += pizzaPrice;

@@ -32,8 +32,9 @@ const deliverySchema = new mongoose.Schema({
     },
     address: { type: String, required: true },
     status: { type: String, enum: ['pending', 'shipped', 'delivered'], default: 'pending' },
-    tracking_url: { type: String, required: false }, // Google Maps tracking URL
-    createdAt: { type: Date, default: Date.now }
+    tracking_url: { type: String, required: false },
+    createdAt: { type: Date, default: Date.now },
+    deliveredAt: { type: Date, required: false } // New field for confirmation timestamp
 });
 
 module.exports = mongoose.model('delivery', deliverySchema);

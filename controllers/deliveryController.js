@@ -69,3 +69,31 @@ exports.getDelivery = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+exports.confirmDelivery = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const deliveryId = req.params.id;
+
+        const delivery = await Delivery.findById(deliveryId);
+        if (!delivery) {
+            return res.status(404).json({ error: 'Delivery not found' });
+        }
+
+        if (delivery.userId.toString() !== userId) {
+            return res.status(403).json({ error: 'Unauthorized: You can only confirm your own deliveries' });
+        }
+
+        if (delivery.status === 'delivered') {
+            return res.status(400).json({ error: 'Delivery has already been confirmed' });
+        }
+
+        delivery.status = 'delivered';
+        delivery.deliveredAt = new Date(); // Add timestamp for when delivery was confirmed
+        await delivery.save();
+
+        res.json({ message: 'Delivery confirmed successfully', delivery });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
