@@ -41,7 +41,7 @@ exports.getUserById = async (req, res) => {
 // Create a new user
 exports.createUser = async (req, res) => {
     try {
-        const { username, password, email, address, date_of_birth, role } = req.body;
+        const { username, password, email, address, date_of_birth, phone, role } = req.body;
         const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = new User({
             username,
@@ -49,6 +49,7 @@ exports.createUser = async (req, res) => {
             email,
             address,
             date_of_birth,
+            phone,
             role,
         });
         const savedUser = await newUser.save();
@@ -219,6 +220,7 @@ exports.resetPassword = async (req, res) => {
 };
 // Verify reset token (mã xác thực)
 exports.verifyResetCode = async (req, res) => {
+
     try {
         const { token } = req.body;
         if (!token) {
@@ -226,8 +228,7 @@ exports.verifyResetCode = async (req, res) => {
         }
 
         const user = await User.findOne({
-            resetPasswordToken: token,
-            resetPasswordExpires: { $gt: Date.now() },
+        resetPasswordToken: String(token), // Ép kiểu về chuỗi
         });
 
         if (!user) {
