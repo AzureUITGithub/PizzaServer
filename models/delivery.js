@@ -6,6 +6,7 @@ const deliverySchema = new mongoose.Schema({
         pizzas: [{
             pizzaId: { type: mongoose.Schema.Types.ObjectId, ref: 'pizza', required: false },
             customPizza: {
+                pizzaId: { type: mongoose.Schema.Types.ObjectId, ref: 'pizza', required: true }, // Add this
                 name: { type: String, required: false },
                 description: { type: String, required: false },
                 size: { type: String, required: false },

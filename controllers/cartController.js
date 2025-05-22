@@ -130,3 +130,165 @@ exports.clearCart = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+exports.updateCartItemQuantity = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { itemType, itemIndex, quantity } = req.body;
+
+        if (!itemType || itemIndex === undefined || !quantity || quantity <= 0) {
+            return res.status(400).json({ error: 'itemType, itemIndex, and a positive quantity are required' });
+        }
+
+        const cart = await Cart.findOne({ userId });
+        if (!cart) {
+            return res.status(404).json({ error: 'Cart not found' });
+        }
+
+        let updated = false;
+        let newTotalPrice = cart.total_price;
+
+        switch (itemType.toLowerCase()) {
+            case 'pizza':
+                if (itemIndex >= 0 && itemIndex < cart.pizzas.length) {
+                    const pizza = cart.pizzas[itemIndex];
+                    let basePrice = 0;
+                    if (pizza.pizzaId) {
+                        const existingPizza = await Pizza.findById(pizza.pizzaId);
+                        basePrice = existingPizza.base_price;
+                    } else if (pizza.customPizza) {
+                        const toppingDocs = await Topping.find({ _id: { $in: pizza.customPizza.toppings || [] } });
+                        const toppingBasePrice = toppingDocs.reduce((sum, topping) => sum + (topping.base_price || 0), 0);
+                        basePrice = pizza.customPizza.base_price + toppingBasePrice;
+                    }
+                    const priceDiff = basePrice * (quantity - pizza.quantity);
+                    pizza.quantity = quantity;
+                    newTotalPrice += priceDiff;
+                    updated = true;
+                }
+                break;
+            case 'drink':
+                if (itemIndex >= 0 && itemIndex < cart.drinks.length) {
+                    const drink = cart.drinks[itemIndex];
+                    const drinkDoc = await Drink.findById(drink.drinkId);
+                    const priceDiff = drinkDoc.base_price * (quantity - drink.quantity);
+                    drink.quantity = quantity;
+                    newTotalPrice += priceDiff;
+                    updated = true;
+                }
+                break;
+            case 'side':
+                if (itemIndex >= 0 && itemIndex < cart.sides.length) {
+                    const side = cart.sides[itemIndex];
+                    const sideDoc = await Side.findById(side.sideId);
+                    const priceDiff = sideDoc.base_price * (quantity - side.quantity);
+                    side.quantity = quantity;
+                    newTotalPrice += priceDiff;
+                    updated = true;
+                }
+                break;
+            case 'salad':
+                if (itemIndex >= 0 && itemIndex < cart.salads.length) {
+                    const salad = cart.salads[itemIndex];
+                    const saladDoc = await Salad.findById(salad.saladId);
+                    const priceDiff = saladDoc.base_price * (quantity - salad.quantity);
+                    salad.quantity = quantity;
+                    newTotalPrice += priceDiff;
+                    updated = true;
+                }
+                break;
+            default:
+                return res.status(400).json({ error: 'Invalid itemType. Use pizza, drink, side, or salad' });
+        }
+
+        if (!updated) {
+            return res.status(404).json({ error: 'Item not found at the specified index' });
+        }
+
+        cart.total_price = newTotalPrice > 0 ? newTotalPrice : 0;
+        await cart.save();
+
+        res.json({ message: 'Quantity updated successfully', cart });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.deleteCartItem = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { itemType, itemIndex } = req.body;
+
+        if (!itemType || itemIndex === undefined) {
+            return res.status(400).json({ error: 'itemType and itemIndex are required' });
+        }
+
+        const cart = await Cart.findOne({ userId });
+        if (!cart) {
+            return res.status(404).json({ error: 'Cart not found' });
+        }
+
+        let deleted = false;
+        let priceReduction = 0;
+
+        switch (itemType.toLowerCase()) {
+            case 'pizza':
+                if (itemIndex >= 0 && itemIndex < cart.pizzas.length) {
+                    const pizza = cart.pizzas[itemIndex];
+                    let basePrice = 0;
+                    if (pizza.pizzaId) {
+                        const existingPizza = await Pizza.findById(pizza.pizzaId);
+                        basePrice = existingPizza.base_price;
+                    } else if (pizza.customPizza) {
+                        const toppingDocs = await Topping.find({ _id: { $in: pizza.customPizza.toppings || [] } });
+                        const toppingBasePrice = toppingDocs.reduce((sum, topping) => sum + (topping.base_price || 0), 0);
+                        basePrice = pizza.customPizza.base_price + toppingBasePrice;
+                    }
+                    priceReduction = basePrice * pizza.quantity;
+                    cart.pizzas.splice(itemIndex, 1);
+                    deleted = true;
+                }
+                break;
+            case 'drink':
+                if (itemIndex >= 0 && itemIndex < cart.drinks.length) {
+                    const drink = cart.drinks[itemIndex];
+                    const drinkDoc = await Drink.findById(drink.drinkId);
+                    priceReduction = drinkDoc.base_price * drink.quantity;
+                    cart.drinks.splice(itemIndex, 1);
+                    deleted = true;
+                }
+                break;
+            case 'side':
+                if (itemIndex >= 0 && itemIndex < cart.sides.length) {
+                    const side = cart.sides[itemIndex];
+                    const sideDoc = await Side.findById(side.sideId);
+                    priceReduction = sideDoc.base_price * side.quantity;
+                    cart.sides.splice(itemIndex, 1);
+                    deleted = true;
+                }
+                break;
+            case 'salad':
+                if (itemIndex >= 0 && itemIndex < cart.salads.length) {
+                    const salad = cart.salads[itemIndex];
+                    const saladDoc = await Salad.findById(salad.saladId);
+                    priceReduction = saladDoc.base_price * salad.quantity;
+                    cart.salads.splice(itemIndex, 1);
+                    deleted = true;
+                }
+                break;
+            default:
+                return res.status(400).json({ error: 'Invalid itemType. Use pizza, drink, side, or salad' });
+        }
+
+        if (!deleted) {
+            return res.status(404).json({ error: 'Item not found at the specified index' });
+        }
+
+        cart.total_price = Math.max(cart.total_price - priceReduction, 0);
+        await cart.save();
+
+        res.json({ message: 'Item deleted successfully', cart });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
