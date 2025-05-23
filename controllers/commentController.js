@@ -5,36 +5,32 @@ exports.createComment = async (req, res) => {
     try {
         const userId = req.user.userId;
         const deliveryId = req.params.deliveryId;
-        const { pizzaId, comment } = req.body;
+        const { comment } = req.body;
 
-        if (!pizzaId || !comment) {
-            return res.status(400).json({ error: 'pizzaId and comment are required' });
+        // Kiểm tra trường comment
+        if (!comment) {
+            return res.status(400).json({ error: 'Comment is required' });
         }
 
+        // Kiểm tra giao hàng tồn tại
         const delivery = await Delivery.findById(deliveryId);
         if (!delivery) {
             return res.status(404).json({ error: 'Delivery not found' });
         }
 
+        // Kiểm tra quyền người dùng
         if (delivery.userId.toString() !== userId) {
             return res.status(403).json({ error: 'Unauthorized: You can only comment on your own deliveries' });
         }
 
+        // Kiểm tra trạng thái giao hàng
         if (delivery.status !== 'delivered') {
             return res.status(400).json({ error: 'Cannot comment until delivery is confirmed' });
         }
 
-        const orderPizza = delivery.order.pizzas.find(p => 
-            p.pizzaId?.toString() === pizzaId || 
-            (p.customPizza && p.customPizza.pizzaId?.toString() === pizzaId)
-        );
-        if (!orderPizza) {
-            return res.status(400).json({ error: 'Invalid pizzaId for this delivery' });
-        }
-
+        // Tạo comment mới
         const newComment = new Comment({
             deliveryId,
-            pizzaId,
             userId,
             comment
         });
@@ -46,11 +42,11 @@ exports.createComment = async (req, res) => {
     }
 };
 
+// Các hàm khác giữ nguyên
 exports.getCommentsByDelivery = async (req, res) => {
     try {
         const deliveryId = req.params.deliveryId;
         const comments = await Comment.find({ deliveryId })
-            .populate('pizzaId')
             .populate('userId');
         if (!comments.length) {
             return res.status(404).json({ error: 'No comments found for this delivery' });
@@ -65,7 +61,6 @@ exports.getAllComments = async (req, res) => {
     try {
         const userId = req.user.userId;
         const comments = await Comment.find({ userId })
-            .populate('pizzaId')
             .populate('deliveryId')
             .populate('userId');
         if (!comments.length) {
@@ -80,7 +75,6 @@ exports.getAllComments = async (req, res) => {
 exports.getAllCommentsAdmin = async (req, res) => {
     try {
         const comments = await Comment.find()
-            .populate('pizzaId')
             .populate('deliveryId')
             .populate('userId');
         if (!comments.length) {
