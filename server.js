@@ -11,6 +11,7 @@ const userRoutes = require('./routes/userRoutes');
 const cartRoutes = require('./routes/cartRoutes'); 
 const deliveryRoutes = require('./routes/deliveryRoutes'); 
 const paymentRoutes = require('./routes/paymentRoutes');
+const statsRoutes = require('./routes/statsRoutes');
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/cart', cartRoutes); 
 app.use('/api/delivery', deliveryRoutes); 
 app.use('/api/payment', paymentRoutes);
+app.use('/api/stats', statsRoutes);
 
 app.use((err, req, res, next) => {
     console.error(err.stack);
