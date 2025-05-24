@@ -7,6 +7,7 @@ const isAdmin = require('../utils/isAdmin');
 
 router.post('/createDelivery', authMiddleware, deliveryController.createDelivery);
 router.get('/getDelivery/:id', authMiddleware, deliveryController.getDelivery);
+router.get('/getAllDeliveredDeliveries', authMiddleware, deliveryController.getAllDeliveredDeliveries);
 router.put('/confirmDelivery/:id', authMiddleware, deliveryController.confirmDelivery);
 router.post('/addComment/:deliveryId', authMiddleware, commentController.createComment);
 router.get('/comments/:deliveryId', authMiddleware, commentController.getCommentsByDelivery);

@@ -97,3 +97,27 @@ exports.confirmDelivery = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+exports.getAllDeliveredDeliveries = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const deliveries = await Delivery.find({ 
+            userId, 
+            status: 'delivered' 
+        })
+            .populate('order.pizzas.pizzaId')
+            .populate('order.pizzas.customPizza.toppings')
+            .populate('order.drinks.drinkId')
+            .populate('order.sides.sideId')
+            .populate('order.salads.saladId')
+            .sort({ deliveredAt: -1 }); // Sort by delivery date, most recent first
+
+        if (!deliveries || deliveries.length === 0) {
+            return res.status(404).json({ message: 'No delivered orders found' });
+        }
+
+        res.json(deliveries);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
