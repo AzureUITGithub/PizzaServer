@@ -21,7 +21,6 @@ const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors());
 app.use(helmet());
 app.use(helmet.crossOriginResourcePolicy({policy: "cross-origin"}));
 app.use(morgan('common'));
@@ -42,6 +41,8 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/delivery', deliveryRoutes); 
 app.use('/api/payment', paymentRoutes);
 app.use('/api/stats', statsRoutes);
+
+app.use(cors());
 
 app.use((err, req, res, next) => {
     console.error(err.stack);
