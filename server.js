@@ -19,6 +19,9 @@ const statsRoutes = require('./routes/statsRoutes');
 
 const app = express();
 
+app.use(
+  cors({origin: ['http://localhost:3000', 'http://127.0.0.1:3000']})
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(helmet());
@@ -41,8 +44,6 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/delivery', deliveryRoutes); 
 app.use('/api/payment', paymentRoutes);
 app.use('/api/stats', statsRoutes);
-
-app.use(cors());
 
 app.use((err, req, res, next) => {
     console.error(err.stack);
