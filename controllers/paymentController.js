@@ -111,3 +111,24 @@ exports.paymentCallback = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+exports.getAllPayments = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const isAdmin = req.user.role === 'admin';
+
+        let payments;
+        if (isAdmin) {
+            payments = await Payment.find()
+                .populate('userId', 'email')
+                .sort({ createdAt: -1 });
+        } else {
+            payments = await Payment.find({ userId })
+                .sort({ createdAt: -1 });
+        }
+
+        res.json(payments);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
