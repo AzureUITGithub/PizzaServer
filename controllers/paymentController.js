@@ -117,17 +117,43 @@ exports.getAllPayments = async (req, res) => {
         const userId = req.user.userId;
         const isAdmin = req.user.role === 'admin';
 
-        let payments;
-        if (isAdmin) {
-            payments = await Payment.find()
-                .populate('userId', 'email')
-                .sort({ createdAt: -1 });
-        } else {
-            payments = await Payment.find({ userId })
-                .sort({ createdAt: -1 });
+        // Extract query parameters
+        const page = parseInt(req.query.page) || 0;
+        const pageSize = parseInt(req.query.pageSize) || 20;
+        const sort = req.query.sort ? JSON.parse(req.query.sort) : { createdAt: -1 };
+        const search = req.query.search || '';
+
+        // Build query
+        let query = {};
+        if (!isAdmin) {
+            query.userId = userId; // Restrict to user's payments if not admin
         }
 
-        res.json(payments);
+        // Add search filter (e.g., search by orderId or requestId)
+        if (search) {
+            query.$or = [
+                { orderId: { $regex: search, $options: 'i' } },
+                { requestId: { $regex: search, $options: 'i' } },
+            ];
+        }
+
+        // Convert sort format to MongoDB sort object
+        let sortOptions = {};
+        if (sort && sort.field && sort.sort) {
+            sortOptions[sort.field] = sort.sort === 'asc' ? 1 : -1;
+        } else {
+            sortOptions = { createdAt: -1 }; // Default sort
+        }
+
+        // Fetch payments with pagination and sorting
+        const total = await Payment.countDocuments(query);
+        const payments = await Payment.find(query)
+            .populate('userId', 'email')
+            .sort(sortOptions)
+            .skip(page * pageSize)
+            .limit(pageSize);
+
+        res.json({ payments, total });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
