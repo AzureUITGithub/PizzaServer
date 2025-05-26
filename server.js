@@ -6,6 +6,13 @@ const cors = require("cors");;
 const helmet = require('helmet');
 const morgan = require('morgan');
 
+
+const OpenAI = require("openai");
+
+const openai = new OpenAI({
+  apiKey: "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",
+})
+
 const pizzaRoutes = require('./routes/pizzaRoutes');
 const drinkRoutes = require('./routes/drinkRoutes');
 const saladRoutes = require('./routes/saladRoutes');
@@ -44,6 +51,26 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/delivery', deliveryRoutes); 
 app.use('/api/payment', paymentRoutes);
 app.use('/api/stats', statsRoutes);
+
+app.post("/chat", async (req, res) => {
+  try {
+    const { prompt } = req.body;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { role: "user", content: prompt }
+      ],
+      max_tokens: 512,
+      temperature: 0
+    });
+
+    res.send(completion.choices[0].message.content);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Lỗi khi gọi API OpenAI");
+  }
+});
 
 app.use((err, req, res, next) => {
     console.error(err.stack);
